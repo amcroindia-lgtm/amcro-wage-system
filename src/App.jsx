@@ -16,7 +16,7 @@ const SITES = [
 
 const ADMIN_PASSCODE = "810128";
 const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbzQSGuv7-nJsY3_rcnpv8Y7iIP4OK6_YD2ixjH2-D_chlMWGwlEN1UumbrHndtFW1n1/exec";
+  "https://script.google.com/macros/s/AKfycbzBIi-K7bg2G6CUJKD5z-sqr40SJgcjEhpSsEH72d5ZP7pUKeN2yOICqncCyGOQjDNj/exec";
 
 // Work types available for selection
 const WORK_TYPES = [
@@ -337,15 +337,24 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
   const [date, setDate] = useState(getTodayStr());
   const [rows, setRows] = useState([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
 
-  /* Restore existing records when date/site changes */
+  // Keep a ref so we can read latest records without triggering the effect
+  const recordsRef = React.useRef(records);
+  useEffect(() => { recordsRef.current = records; }, [records]);
+
+  /* Load saved records ONLY when the date or site changes — NOT when records
+     updates. This prevents unsaved local deletions/edits from being reset
+     whenever the parent re-renders (e.g. after a save or sheet sync). */
   useEffect(() => {
-    const existing = records.filter(r => r.site === site.name && r.date === date);
+    const existing = recordsRef.current.filter(
+      r => r.site === site.name && r.date === date
+    );
     setRows(
       existing.length > 0
         ? existing.map(r => ({ id: uid(), name: r.name, wage: r.wage, status: r.status, workType: r.workType || "" }))
         : [{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]
     );
-  }, [date, site.name, records]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, site.name]); // ← records intentionally excluded
 
   const add    = () => setRows(p => [...p, { id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
   const remove = (id) => setRows(p => p.length === 1
