@@ -725,6 +725,48 @@ button, input, select {
 .input-wage::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .input-wage[type=number] { -moz-appearance: textfield; }
 
+/* Work Type Row */
+.worker-card-worktype {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 12px;
+  border-top: 1px dashed var(--border);
+  min-height: 42px;
+  background: var(--off-white);
+}
+
+.worktype-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sky-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.worktype-select {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  outline: none;
+  cursor: pointer;
+  padding: 8px 0;
+  /* custom arrow */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230EA5E9' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  padding-right: 20px;
+}
+.worktype-select option { font-weight: 500; color: var(--navy); }
+
 .worker-card-bottom {
   display: flex;
   align-items: center;
@@ -1219,7 +1261,20 @@ button, input, select {
   gap: 8px;
   min-height: 48px;
 }
-.modal-row-name { font-weight: 600; font-size: 14px; color: var(--navy); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modal-row-left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.modal-row-name { font-weight: 600; font-size: 14px; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modal-row-worktype {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sky-deep);
+  background: var(--sky-pale);
+  border-radius: 20px;
+  padding: 2px 8px;
+  width: fit-content;
+  letter-spacing: 0.2px;
+}
 .modal-row-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .modal-row-wage { font-weight: 800; font-size: 14px; color: var(--navy); white-space: nowrap; }
 

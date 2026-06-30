@@ -18,6 +18,24 @@ const ADMIN_PASSCODE = "810128";
 const SHEETS_URL =
   "https://script.google.com/macros/s/AKfycbzQSGuv7-nJsY3_rcnpv8Y7iIP4OK6_YD2ixjH2-D_chlMWGwlEN1UumbrHndtFW1n1/exec";
 
+// Work types available for selection
+const WORK_TYPES = [
+  "Mason",
+  "Helper / Labour",
+  "Carpenter",
+  "Plumber",
+  "Electrician",
+  "Painter",
+  "Steel Fixer",
+  "Tile Worker",
+  "Waterproofing",
+  "Excavation",
+  "Shuttering",
+  "Welder",
+  "Supervisor",
+  "Other",
+];
+
 /* ── Helpers ────────────────────────────────────────────────── */
 const getTodayStr = () => {
   const d = new Date();
@@ -75,11 +93,12 @@ export default function App() {
       const data = await res.json();
       if (data?.records) {
         const rows = data.records.map(r => ({
-          site:   r.site   || r.Site   || "",
-          date:   r.date   || r.Date   || "",
-          name:   r.name   || r["Worker Name"] || "",
-          wage:   Number(r.wage || r.Wage) || 0,
-          status: String(r.status || r["Payment Status"] || "unpaid").toLowerCase(),
+          site:     r.site     || r.Site     || "",
+          date:     r.date     || r.Date     || "",
+          name:     r.name     || r["Worker Name"] || "",
+          wage:     Number(r.wage || r.Wage) || 0,
+          status:   String(r.status || r["Payment Status"] || "unpaid").toLowerCase(),
+          workType: r.workType || r["Work Type"] || "",
         }));
         setRecords(rows);
         localStorage.setItem("amcro_records", JSON.stringify(rows));
@@ -97,7 +116,8 @@ export default function App() {
         body: JSON.stringify({
           action: "write", site: siteName, date,
           rows: rows.map(r => ({ name: r.name, wage: Number(r.wage)||0,
-            status: r.status === "paid" ? "Paid" : "Unpaid" })),
+            status: r.status === "paid" ? "Paid" : "Unpaid",
+            workType: r.workType || "" })),
         }),
       });
       const d = await res.json().catch(() => null);
@@ -111,7 +131,7 @@ export default function App() {
   const saveEntry = async (siteName, date, rows) => {
     const merged = [
       ...records.filter(r => !(r.site === siteName && r.date === date)),
-      ...rows.map(r => ({ site: siteName, date, name: r.name.trim(), wage: Number(r.wage)||0, status: r.status })),
+      ...rows.map(r => ({ site: siteName, date, name: r.name.trim(), wage: Number(r.wage)||0, status: r.status, workType: r.workType || "" })),
     ];
     setRecords(merged);
     toast("success", "Saved on device ✓");
@@ -315,21 +335,21 @@ function PasscodeGate({ role, site, onSuccess, onBack }) {
    ══════════════════════════════════════════════════════════════ */
 function SupervisorEntry({ site, records, onSave, onBack }) {
   const [date, setDate] = useState(getTodayStr());
-  const [rows, setRows] = useState([{ id: uid(), name: "", wage: "", status: "unpaid" }]);
+  const [rows, setRows] = useState([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
 
   /* Restore existing records when date/site changes */
   useEffect(() => {
     const existing = records.filter(r => r.site === site.name && r.date === date);
     setRows(
       existing.length > 0
-        ? existing.map(r => ({ id: uid(), name: r.name, wage: r.wage, status: r.status }))
-        : [{ id: uid(), name: "", wage: "", status: "unpaid" }]
+        ? existing.map(r => ({ id: uid(), name: r.name, wage: r.wage, status: r.status, workType: r.workType || "" }))
+        : [{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]
     );
   }, [date, site.name, records]);
 
-  const add    = () => setRows(p => [...p, { id: uid(), name: "", wage: "", status: "unpaid" }]);
+  const add    = () => setRows(p => [...p, { id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
   const remove = (id) => setRows(p => p.length === 1
-    ? [{ id: uid(), name: "", wage: "", status: "unpaid" }]
+    ? [{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]
     : p.filter(r => r.id !== id)
   );
   const change = (id, field, val) => setRows(p => p.map(r => r.id === id ? { ...r, [field]: val } : r));
@@ -392,6 +412,22 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
                 />
               </div>
             </div>
+
+            {/* Work Type Row */}
+            <div className="worker-card-worktype">
+              <span className="worktype-label">Work Type</span>
+              <select
+                className="worktype-select"
+                value={row.workType}
+                onChange={e => change(row.id, "workType", e.target.value)}
+              >
+                <option value="">— Select work type —</option>
+                {WORK_TYPES.map(w => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="worker-card-bottom">
               <div className="status-toggle">
                 <button
@@ -471,9 +507,9 @@ function OwnerDashboard({ records, loading, onRefresh, onSaveEntry, onBack }) {
 
   const exportCSV = () => {
     if (!filtered.length) return;
-    let csv = "data:text/csv;charset=utf-8,Site,Date,Worker Name,Daily Wage,Status\n";
+    let csv = "data:text/csv;charset=utf-8,Site,Date,Worker Name,Work Type,Daily Wage,Status\n";
     filtered.forEach(r => {
-      csv += `"${r.site.replace(/"/g,'""')}",${r.date},"${r.name.replace(/"/g,'""')}",${r.wage},${r.status==="paid"?"Paid":"Unpaid"}\n`;
+      csv += `"${r.site.replace(/"/g,'""')}",${r.date},"${r.name.replace(/"/g,'""')}","${(r.workType||"").replace(/"/g,'""')}",${r.wage},${r.status==="paid"?"Paid":"Unpaid"}\n`;
     });
     const a = Object.assign(document.createElement("a"), {
       href: encodeURI(csv),
@@ -622,7 +658,12 @@ function DayDetailModal({ entry, onClose, onToggle, onAllPaid }) {
         <div className="modal-body">
           {entry.rows.map(row => (
             <div key={row.name} className="modal-row">
-              <div className="modal-row-name">{row.name}</div>
+              <div className="modal-row-left">
+                <div className="modal-row-name">{row.name}</div>
+                {row.workType && (
+                  <div className="modal-row-worktype">{row.workType}</div>
+                )}
+              </div>
               <div className="modal-row-right">
                 <div className="modal-row-wage">₹ {fmtINR(row.wage)}</div>
                 <span
