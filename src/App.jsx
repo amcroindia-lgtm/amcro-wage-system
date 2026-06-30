@@ -337,9 +337,8 @@ function PasscodeGate({ role, site, onSuccess, onBack }) {
    SUPERVISOR ENTRY
    ══════════════════════════════════════════════════════════════ */
 function SupervisorEntry({ site, records, onSave, onBack }) {
-  const [date,     setDate]     = useState(getTodayStr());
-  const [siteName, setSiteName] = useState(""); // manually entered by supervisor
-  const [rows,     setRows]     = useState([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
+  const [date, setDate] = useState(getTodayStr());
+  const [rows, setRows] = useState([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "", siteName: "" }]);
 
   // Keep a ref so we can read latest records without triggering the effect
   const recordsRef = React.useRef(records);
@@ -352,10 +351,8 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
     );
     if (existing.length > 0) {
       setRows(existing.map(r => ({ id: uid(), name: r.name, wage: r.wage, status: r.status, workType: r.workType || "", siteName: r.siteName || "" })));
-      setSiteName(existing[0].siteName || "");
     } else {
       setRows([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "", siteName: "" }]);
-      setSiteName("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, site.name]);
@@ -375,10 +372,9 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
     [rows]
   );
 
-  // Attach siteName to every row before saving
   const save = () => onSave(
     site.name, date,
-    rows.filter(r => r.name.trim()).map(r => ({ ...r, siteName }))
+    rows.filter(r => r.name.trim())
   );
 
   return (
@@ -389,18 +385,6 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
         onBack={onBack}
         right={<button className="icon-btn" onClick={onBack} title="Log out"><LogOut size={17}/></button>}
       />
-
-      {/* Site Name manual input */}
-      <div className="sitename-bar">
-        <span className="sitename-bar-label">Site Name</span>
-        <input
-          type="text"
-          className="sitename-input"
-          placeholder="e.g. Block A, Floor 2, Foundation Area…"
-          value={siteName}
-          onChange={e => setSiteName(e.target.value)}
-        />
-      </div>
 
       {/* Date & count bar */}
       <div className="entry-subbar">
@@ -455,6 +439,18 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
                   <option key={w} value={w}>{w}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Site Name Row */}
+            <div className="worker-card-sitename">
+              <span className="sitename-label">Site Name</span>
+              <input
+                type="text"
+                className="sitename-card-input"
+                placeholder="e.g. Block A, Floor 2"
+                value={row.siteName || ""}
+                onChange={e => change(row.id, "siteName", e.target.value)}
+              />
             </div>
 
             <div className="worker-card-bottom">

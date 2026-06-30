@@ -780,6 +780,43 @@ button, input, select {
   flex-shrink: 0;
 }
 
+/* Site Name Row inside card */
+.worker-card-sitename {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 12px;
+  border-top: 1px dashed var(--border);
+  min-height: 42px;
+  background: var(--off-white);
+}
+
+.sitename-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sky-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sitename-card-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  outline: none;
+  padding: 8px 0;
+}
+.sitename-card-input::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
 .worktype-select {
   flex: 1;
   border: none;
