@@ -16,7 +16,7 @@ const SITES = [
 
 const ADMIN_PASSCODE = "810128";
 const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbxuy-H0ssBRYnQKPPWOB57hxPjydjS_av0QK2nDs3e5KEf1tsaeOdYRd43HoIdXsg8y/exec";
+  "https://script.google.com/macros/s/AKfycbzQ30JblaUjX3q-IND-rN8wCkm2CSazbQqkq4vVb8Q2SahwKWI6ywk8aX3SVGe9hjG0/exec";
 
 // Work types available for selection
 const WORK_TYPES = [
