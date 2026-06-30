@@ -16,7 +16,7 @@ const SITES = [
 
 const ADMIN_PASSCODE = "810128";
 const SHEETS_URL =
-  "https://script.google.com/macros/s/AKfycbzBIi-K7bg2G6CUJKD5z-sqr40SJgcjEhpSsEH72d5ZP7pUKeN2yOICqncCyGOQjDNj/exec";
+  "https://script.google.com/macros/s/AKfycbyaSQFGnLt1J4ZK33v7uyardD3Lfngl9XvnlMrU0Vre1-5sun9aPJNpubIuYrt4u7g/exec";
 
 // Work types available for selection
 const WORK_TYPES = [
@@ -99,6 +99,7 @@ export default function App() {
           wage:     Number(r.wage || r.Wage) || 0,
           status:   String(r.status || r["Payment Status"] || "unpaid").toLowerCase(),
           workType: r.workType || r["Work Type"] || "",
+          siteName: r.siteName || r["Site Name"] || "",
         }));
         setRecords(rows);
         localStorage.setItem("amcro_records", JSON.stringify(rows));
@@ -115,9 +116,11 @@ export default function App() {
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "write", site: siteName, date,
+          siteName: rows[0]?.siteName || "",
           rows: rows.map(r => ({ name: r.name, wage: Number(r.wage)||0,
             status: r.status === "paid" ? "Paid" : "Unpaid",
-            workType: r.workType || "" })),
+            workType: r.workType || "",
+            siteName: r.siteName || "" })),
         }),
       });
       const d = await res.json().catch(() => null);
@@ -131,7 +134,7 @@ export default function App() {
   const saveEntry = async (siteName, date, rows) => {
     const merged = [
       ...records.filter(r => !(r.site === siteName && r.date === date)),
-      ...rows.map(r => ({ site: siteName, date, name: r.name.trim(), wage: Number(r.wage)||0, status: r.status, workType: r.workType || "" })),
+      ...rows.map(r => ({ site: siteName, date, name: r.name.trim(), wage: Number(r.wage)||0, status: r.status, workType: r.workType || "", siteName: r.siteName || "" })),
     ];
     setRecords(merged);
     toast("success", "Saved on device ✓");
@@ -334,44 +337,49 @@ function PasscodeGate({ role, site, onSuccess, onBack }) {
    SUPERVISOR ENTRY
    ══════════════════════════════════════════════════════════════ */
 function SupervisorEntry({ site, records, onSave, onBack }) {
-  const [date, setDate] = useState(getTodayStr());
-  const [rows, setRows] = useState([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
+  const [date,     setDate]     = useState(getTodayStr());
+  const [siteName, setSiteName] = useState(""); // manually entered by supervisor
+  const [rows,     setRows]     = useState([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
 
   // Keep a ref so we can read latest records without triggering the effect
   const recordsRef = React.useRef(records);
   useEffect(() => { recordsRef.current = records; }, [records]);
 
-  /* Load saved records ONLY when the date or site changes — NOT when records
-     updates. This prevents unsaved local deletions/edits from being reset
-     whenever the parent re-renders (e.g. after a save or sheet sync). */
+  /* Load saved records ONLY when the date or site changes */
   useEffect(() => {
     const existing = recordsRef.current.filter(
       r => r.site === site.name && r.date === date
     );
-    setRows(
-      existing.length > 0
-        ? existing.map(r => ({ id: uid(), name: r.name, wage: r.wage, status: r.status, workType: r.workType || "" }))
-        : [{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]
-    );
+    if (existing.length > 0) {
+      setRows(existing.map(r => ({ id: uid(), name: r.name, wage: r.wage, status: r.status, workType: r.workType || "", siteName: r.siteName || "" })));
+      setSiteName(existing[0].siteName || "");
+    } else {
+      setRows([{ id: uid(), name: "", wage: "", status: "unpaid", workType: "", siteName: "" }]);
+      setSiteName("");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, site.name]); // ← records intentionally excluded
+  }, [date, site.name]);
 
-  const add    = () => setRows(p => [...p, { id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]);
+  const add    = () => setRows(p => [...p, { id: uid(), name: "", wage: "", status: "unpaid", workType: "", siteName: "" }]);
   const remove = (id) => setRows(p => p.length === 1
-    ? [{ id: uid(), name: "", wage: "", status: "unpaid", workType: "" }]
+    ? [{ id: uid(), name: "", wage: "", status: "unpaid", workType: "", siteName: "" }]
     : p.filter(r => r.id !== id)
   );
   const change = (id, field, val) => setRows(p => p.map(r => r.id === id ? { ...r, [field]: val } : r));
 
-  const dayTotal   = useMemo(() => rows.reduce((s, r) => s + (Number(r.wage) || 0), 0), [rows]);
-  const workerCnt  = rows.filter(r => r.name.trim()).length;
-  const formValid  = useMemo(() =>
+  const dayTotal  = useMemo(() => rows.reduce((s, r) => s + (Number(r.wage) || 0), 0), [rows]);
+  const workerCnt = rows.filter(r => r.name.trim()).length;
+  const formValid = useMemo(() =>
     rows.some(r => r.name.trim()) &&
     rows.every(r => !r.name.trim() || Number(r.wage) > 0),
     [rows]
   );
 
-  const save = () => onSave(site.name, date, rows.filter(r => r.name.trim()));
+  // Attach siteName to every row before saving
+  const save = () => onSave(
+    site.name, date,
+    rows.filter(r => r.name.trim()).map(r => ({ ...r, siteName }))
+  );
 
   return (
     <div className="entry-screen">
@@ -381,6 +389,18 @@ function SupervisorEntry({ site, records, onSave, onBack }) {
         onBack={onBack}
         right={<button className="icon-btn" onClick={onBack} title="Log out"><LogOut size={17}/></button>}
       />
+
+      {/* Site Name manual input */}
+      <div className="sitename-bar">
+        <span className="sitename-bar-label">Site Name</span>
+        <input
+          type="text"
+          className="sitename-input"
+          placeholder="e.g. Block A, Floor 2, Foundation Area…"
+          value={siteName}
+          onChange={e => setSiteName(e.target.value)}
+        />
+      </div>
 
       {/* Date & count bar */}
       <div className="entry-subbar">
@@ -516,9 +536,9 @@ function OwnerDashboard({ records, loading, onRefresh, onSaveEntry, onBack }) {
 
   const exportCSV = () => {
     if (!filtered.length) return;
-    let csv = "data:text/csv;charset=utf-8,Site,Date,Worker Name,Work Type,Daily Wage,Status\n";
+    let csv = "data:text/csv;charset=utf-8,Site,Site Name,Date,Worker Name,Work Type,Daily Wage,Status\n";
     filtered.forEach(r => {
-      csv += `"${r.site.replace(/"/g,'""')}",${r.date},"${r.name.replace(/"/g,'""')}","${(r.workType||"").replace(/"/g,'""')}",${r.wage},${r.status==="paid"?"Paid":"Unpaid"}\n`;
+      csv += `"${r.site.replace(/"/g,'""')}","${(r.siteName||"").replace(/"/g,'""')}",${r.date},"${r.name.replace(/"/g,'""')}","${(r.workType||"").replace(/"/g,'""')}",${r.wage},${r.status==="paid"?"Paid":"Unpaid"}\n`;
     });
     const a = Object.assign(document.createElement("a"), {
       href: encodeURI(csv),
@@ -659,6 +679,9 @@ function DayDetailModal({ entry, onClose, onToggle, onAllPaid }) {
           <div className="modal-title">
             <div className="modal-badge"><Building2 size={11}/> {entry.site}</div>
             <h3>{fmtDate(entry.date)}</h3>
+            {entry.rows[0]?.siteName && (
+              <div className="modal-sitename">📍 {entry.rows[0].siteName}</div>
+            )}
             <p>{entry.workers} workers · {entry.pending > 0 ? `${entry.pending} pending` : "All paid ✓"}</p>
           </div>
           <button className="modal-close-btn" onClick={onClose}><X size={17}/></button>
